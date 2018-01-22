@@ -7,62 +7,69 @@
 #include <SoftI2CMaster.h>     //You will need to install this library
 
 #define MAX_BUFFER_SIZE 50
-#define EMA_A 0.6
+#define EMA_A 0.12
 
 #define NUM_SENSORS 3
 #define MAX_NAME_SIZE 50
 typedef struct {
     byte address;
     int range;
-    int emas;
+    int filteredRange;
     char name[MAX_NAME_SIZE];
 } SensorType;
 
 SensorType sensor[3];
 
+byte thisSensor = 0;
+
 void setup(){
     Serial.begin(9600);
     i2c_init();
 
-    OCR0A = 0xAF; // use the same timer as the millis() function
-    TIMSK0 |= _BV(OCIE0A);
-    interrupts();
+//    OCR0A = 0xAF; // use the same timer as the millis() function
+//    TIMSK0 |= _BV(OCIE0A);
+//    interrupts();
 
-    sensor[0].address = 220;
+    sensor[0].address = 224;
     strcpy(sensor[0].name,"left");
-    sensor[1].address = 222;
+    sensor[1].address = 224;
     strcpy(sensor[1].name,"front");
-    sensor[2].address = 223;
+    sensor[2].address = 224;
     strcpy(sensor[2].name,"right");
 
     for(int i=0;i<NUM_SENSORS;i++){
-        sensor[i].emas = getRange(sensor[i].address);
+        sensor[i].filteredRange = getRange(sensor[i].address);
     }
 }
 
 void loop()
 {
     serialHandler();
+
+    sensor[thisSensor].range = getRange(sensor[thisSensor].address);
+    lowPassFilter(sensor[thisSensor].range,&sensor[thisSensor].filteredRange);
+
+    thisSensor = ++thisSensor > 2 ? 0 : thisSensor;
 }
 
-int count = 0;
-bool checkingSensors = false;
-ISR(TIMER0_COMPA_vect){
-    count++;
-    if(count >= 1000 && !checkingSensors){
-        count = 0;
-        checkingSensors = true;
-        readAllSensors();
-        checkingSensors = false;
-    }
-}
+//int count = 0;
+//bool checkingSensors = false;
+//ISR(TIMER0_COMPA_vect){
+//    count++;
+//    if(count >= 1000 && !checkingSensors){
+//        count = 0;
+//        checkingSensors = true;
+//        readAllSensors();
+//        checkingSensors = false;
+//    }
+//}
 
-void readAllSensors(){
-    for(int i=0;i<NUM_SENSORS;i++){
-        sensor[i].range = getRange(sensor[i].address);
-        lowPassFilter(sensor[i].range,&sensor[i].emas);
-    }
-}
+//void readAllSensors(){
+//    for(int i=0;i<NUM_SENSORS;i++){
+//        sensor[i].range = getRange(sensor[0].address);
+//        lowPassFilter(sensor[i].range,&sensor[i].filteredRange);
+//    }
+//}
 
 void serialHandler(){
     char readBuffer[MAX_BUFFER_SIZE] = "";
@@ -86,13 +93,15 @@ void serialHandler(){
 
 void writeSensorData(){
     char result[100];
-    sprintf(result,"{\"%s\":%ld,\"%s\":%ld,\"%s\":%ld}",
-       sensor[0].name, sensor[0].range, sensor[1].name, sensor[1].range, sensor[2].name, sensor[2].range);
+    sprintf(result,"{\"%s\":%d,\"%s\":%d,\"%s\":%d}\n",
+       sensor[0].name, sensor[0].filteredRange,
+       sensor[1].name, sensor[1].filteredRange,
+       sensor[2].name, sensor[2].filteredRange);
     Serial.write(result);
 }
 
-void lowPassFilter(int range, int *emas){
-    *emas = (EMA_A*range) + ((1-EMA_A)* *emas);
+void lowPassFilter(int range, int *filteredRange){
+    *filteredRange = (EMA_A*range) + ((1-EMA_A)* *filteredRange);
 }
 
 boolean startSensor(byte bit8address){
@@ -108,9 +117,13 @@ int getRange(byte address){
     boolean error = 0;
     int range;
     error = startSensor(address);
+//    Serial.print("error: ");
+//    Serial.println(error);
     if (!error){
         delay(100);
         range = readSensor(address);
+//        Serial.print("range: ");
+//        Serial.println(range);
         return range;
     }
 }
@@ -144,7 +157,7 @@ byte locateSensorAddress(){
         if (!error){
             delay(100);
             range = readSensor(i);
-            Serial.println(i);
+//            Serial.println(i);
             if (range != 0){
                 return i;
             }

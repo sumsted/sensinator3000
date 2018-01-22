@@ -5,7 +5,7 @@
 #define I2C_TIMEOUT 100        //Define a timeout of 100 ms -- do not wait for clock stretching longer than this time
 #include <SoftI2CMaster.h>     //You will need to install this library
 
-#define EMA_A 0.6
+#define EMA_A 0.12
 int emaS;
 byte sensorAddress;
 
@@ -13,6 +13,7 @@ void setup(){
   Serial.begin(9600);
   i2c_init();
   sensorAddress = locateSensorAddress();
+  delay(500);
   emaS = getRange(sensorAddress);
 }
 
@@ -78,7 +79,7 @@ byte locateSensorAddress(){
         if (!error){
             delay(100);
             range = readSensor(i);
-            Serial.println(i);
+//            Serial.println(i);
             if (range != 0){
                 return i;
             }
