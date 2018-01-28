@@ -5,7 +5,9 @@
 #define I2C_TIMEOUT 100        //Define a timeout of 100 ms -- do not wait for clock stretching longer than this time
 #include <SoftI2CMaster.h>     //You will need to install this library
 
-#define EMA_A 0.12
+#define EMA_A 0.7
+#define ECHO_DELAY 100
+
 int emaS;
 byte sensorAddress;
 
@@ -27,6 +29,11 @@ void loop()
 }
 
 int lowPassFilter(int range){
+    // If echo doesn't get a reading these max spikes come back
+    // Filtering these out before applying the exp moving avg
+    if(range >750){
+        return emaS; // last averaged value
+    }
     emaS = (EMA_A*range) + ((1-EMA_A)*emaS);
     return emaS;
 }
@@ -45,7 +52,7 @@ int getRange(byte address){
     int range;
     error = startSensor(address);
     if (!error){
-        delay(100);
+        delay(ECHO_DELAY);
         range = readSensor(address);
         return range;
     }

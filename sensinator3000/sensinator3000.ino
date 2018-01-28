@@ -1,3 +1,14 @@
+/*
+ * Read our maxbotix ultrasonic sensors, code used to interface with sensor from datasheet sample
+ * code to handle continual read, low pass filter, and serial handling ours.
+ * 1. Continually read from sensors alternating between each on each loop iteration
+ *    In this way we reduce the delay 100ms max between reads and ability to respond with
+ *    latest readings.
+ * 2. An exponential moving average is used to soften the readings. This finlter also
+ *    eliminates spikes above 750 where the echo is never received.
+ * 3. Listen for serial data at least two bytes with the last an !.
+ * 4. Build a JSON string using the collection of current sensor states. Write it back on serial.
+ */
 #define SCL_PIN 5              //Default SDA is Pin5 PORTC for the UNO -- you can set this to any tristate pin
 #define SCL_PORT PORTC
 #define SDA_PIN 4              //Default SCL is Pin4 PORTC for the UNO -- you can set this to any tristate pin
@@ -7,7 +18,9 @@
 #include <SoftI2CMaster.h>     //You will need to install this library
 
 #define MAX_BUFFER_SIZE 50
-#define EMA_A 0.12
+#define EMA_A 0.7
+#define BAD_ECHO_THRESHOLD 750
+#define ECHO_DELAY 100
 
 #define NUM_SENSORS 3
 #define MAX_NAME_SIZE 50
@@ -26,10 +39,7 @@ void setup(){
     Serial.begin(9600);
     i2c_init();
 
-//    OCR0A = 0xAF; // use the same timer as the millis() function
-//    TIMSK0 |= _BV(OCIE0A);
-//    interrupts();
-
+    // setup sensor addresses
     sensor[0].address = 224;
     strcpy(sensor[0].name,"left");
     sensor[1].address = 224;
@@ -52,24 +62,6 @@ void loop()
     thisSensor = ++thisSensor > 2 ? 0 : thisSensor;
 }
 
-//int count = 0;
-//bool checkingSensors = false;
-//ISR(TIMER0_COMPA_vect){
-//    count++;
-//    if(count >= 1000 && !checkingSensors){
-//        count = 0;
-//        checkingSensors = true;
-//        readAllSensors();
-//        checkingSensors = false;
-//    }
-//}
-
-//void readAllSensors(){
-//    for(int i=0;i<NUM_SENSORS;i++){
-//        sensor[i].range = getRange(sensor[0].address);
-//        lowPassFilter(sensor[i].range,&sensor[i].filteredRange);
-//    }
-//}
 
 void serialHandler(){
     char readBuffer[MAX_BUFFER_SIZE] = "";
@@ -101,6 +93,9 @@ void writeSensorData(){
 }
 
 void lowPassFilter(int range, int *filteredRange){
+    if(range > BAD_ECHO_THRESHOLD){
+        return; // don't change filtered as range is a bad echo
+    }
     *filteredRange = (EMA_A*range) + ((1-EMA_A)* *filteredRange);
 }
 
@@ -117,13 +112,9 @@ int getRange(byte address){
     boolean error = 0;
     int range;
     error = startSensor(address);
-//    Serial.print("error: ");
-//    Serial.println(error);
     if (!error){
-        delay(100);
+        delay(ECHO_DELAY);
         range = readSensor(address);
-//        Serial.print("range: ");
-//        Serial.println(range);
         return range;
     }
 }
@@ -147,7 +138,6 @@ int readSensor(byte bit8address){
     }
 }
 
-
 byte locateSensorAddress(){
     boolean error = 0;
     int range = 0;
@@ -157,7 +147,6 @@ byte locateSensorAddress(){
         if (!error){
             delay(100);
             range = readSensor(i);
-//            Serial.println(i);
             if (range != 0){
                 return i;
             }

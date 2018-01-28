@@ -83,7 +83,7 @@ void setup(){
       cause reliability issues.
   */
   // (OPTIONAL) Run an address change example
-  default_address_change_example();
+//  default_address_change_example();
 
   // Your code here
 }
