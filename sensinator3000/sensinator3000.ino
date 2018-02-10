@@ -22,7 +22,7 @@
 #define BAD_ECHO_THRESHOLD 750
 #define ECHO_DELAY 100
 
-#define NUM_SENSORS 3
+#define NUM_SENSORS 1
 #define MAX_NAME_SIZE 50
 typedef struct {
     byte address;
@@ -41,9 +41,9 @@ void setup(){
 
     // setup sensor addresses
     sensor[0].address = 224;
-    strcpy(sensor[0].name,"left");
+    strcpy(sensor[0].name,"front");
     sensor[1].address = 224;
-    strcpy(sensor[1].name,"front");
+    strcpy(sensor[1].name,"left");
     sensor[2].address = 224;
     strcpy(sensor[2].name,"right");
 
@@ -59,7 +59,7 @@ void loop()
     sensor[thisSensor].range = getRange(sensor[thisSensor].address);
     lowPassFilter(sensor[thisSensor].range,&sensor[thisSensor].filteredRange);
 
-    thisSensor = ++thisSensor > 2 ? 0 : thisSensor;
+//    thisSensor = ++thisSensor > 2 ? 0 : thisSensor;
 }
 
 
@@ -85,10 +85,8 @@ void serialHandler(){
 
 void writeSensorData(){
     char result[100];
-    sprintf(result,"{\"%s\":%d,\"%s\":%d,\"%s\":%d}\n",
-       sensor[0].name, sensor[0].filteredRange,
-       sensor[1].name, sensor[1].filteredRange,
-       sensor[2].name, sensor[2].filteredRange);
+    sprintf(result,"{\"%s\":%d}\n",
+       sensor[0].name, sensor[0].filteredRange);
     Serial.write(result);
 }
 
