@@ -15,6 +15,7 @@ void setup(){
   Serial.begin(9600);
   i2c_init();
   sensorAddress = locateSensorAddress();
+  Serial.print(sensorAddress);
   delay(500);
   emaS = getRange(sensorAddress);
 }

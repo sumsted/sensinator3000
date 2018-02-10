@@ -6,7 +6,7 @@
 
 #include <SoftI2CMaster.h>     //You will need to install this library
 
-#define NEW_ADDRESS 222
+#define NEW_ADDRESS 220
 
 #define EMA_A 0.6
 int emaS;
