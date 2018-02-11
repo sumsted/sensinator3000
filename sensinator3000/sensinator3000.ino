@@ -40,12 +40,12 @@ void setup(){
     i2c_init();
 
     // setup sensor addresses
-    sensor[0].address = 224;
+    sensor[0].address = 220;
     strcpy(sensor[0].name,"front");
-    sensor[1].address = 224;
-    strcpy(sensor[1].name,"left");
+    sensor[1].address = 222;
+    strcpy(sensor[1].name,"right");
     sensor[2].address = 224;
-    strcpy(sensor[2].name,"right");
+    strcpy(sensor[2].name,"left");
 
     for(int i=0;i<NUM_SENSORS;i++){
         sensor[i].filteredRange = getRange(sensor[i].address);
